@@ -2,16 +2,36 @@
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { signOut } from "@/lib/auth";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    } else {
+      navigate('/auth');
+    }
+  };
   
   return (
     <nav className="fixed top-0 left-0 right-0 bg-white z-50 shadow-sm">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
-            <a href="#" className="flex-shrink-0">
+            <a href="/" className="flex-shrink-0">
               <span className="text-xl font-bold text-brand-blue">
                 SmartBiz<span className="text-brand-orange">Whisper</span>
               </span>
@@ -24,7 +44,13 @@ const Navbar = () => {
               <a href="#personas" className="text-gray-600 hover:text-brand-blue px-3 py-2 rounded-md text-sm font-medium">Who It's For</a>
               <a href="#pricing" className="text-gray-600 hover:text-brand-blue px-3 py-2 rounded-md text-sm font-medium">Pricing</a>
               <a href="#roadmap" className="text-gray-600 hover:text-brand-blue px-3 py-2 rounded-md text-sm font-medium">Roadmap</a>
-              <Button className="ml-4 bg-brand-orange hover:bg-opacity-90 text-white">Get Early Access</Button>
+              {user ? (
+                <Button onClick={handleSignOut} variant="outline">Sign Out</Button>
+              ) : (
+                <Button onClick={() => navigate('/auth')} className="ml-4 bg-brand-orange hover:bg-opacity-90 text-white">
+                  Sign In
+                </Button>
+              )}
             </div>
           </div>
           
@@ -47,7 +73,13 @@ const Navbar = () => {
             <a href="#personas" className="text-gray-600 hover:text-brand-blue block px-3 py-2 rounded-md text-base font-medium">Who It's For</a>
             <a href="#pricing" className="text-gray-600 hover:text-brand-blue block px-3 py-2 rounded-md text-base font-medium">Pricing</a>
             <a href="#roadmap" className="text-gray-600 hover:text-brand-blue block px-3 py-2 rounded-md text-base font-medium">Roadmap</a>
-            <Button className="mt-2 w-full bg-brand-orange hover:bg-opacity-90 text-white">Get Early Access</Button>
+            {user ? (
+              <Button onClick={handleSignOut} variant="outline" className="w-full">Sign Out</Button>
+            ) : (
+              <Button onClick={() => navigate('/auth')} className="w-full bg-brand-orange hover:bg-opacity-90 text-white">
+                Sign In
+              </Button>
+            )}
           </div>
         </div>
       )}
