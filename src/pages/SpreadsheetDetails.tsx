@@ -16,6 +16,34 @@ import {
 } from "recharts";
 import { Loader2 } from "lucide-react";
 
+// Define TypeScript interfaces for our analysis results data structure
+interface AnalysisMetrics {
+  [key: string]: string | number;
+}
+
+interface ChartDataItem {
+  name: string;
+  value: number;
+}
+
+interface AnalysisResults {
+  data?: ChartDataItem[];
+  summary?: string;
+  metrics?: AnalysisMetrics;
+  insights?: string[];
+}
+
+interface SpreadsheetAnalysis {
+  id: string;
+  file_name: string;
+  original_file_path: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+  analysis_results: AnalysisResults | null;
+}
+
 const SpreadsheetDetails = () => {
   const { id } = useParams();
   const { user } = useAuth();
@@ -31,7 +59,7 @@ const SpreadsheetDetails = () => {
         .single();
 
       if (error) throw error;
-      return data;
+      return data as SpreadsheetAnalysis;
     },
   });
 
@@ -91,7 +119,7 @@ const SpreadsheetDetails = () => {
                 {Object.entries(analysis.analysis_results.metrics).map(([key, value]) => (
                   <div key={key} className="text-center p-4 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-600">{key}</p>
-                    <p className="text-2xl font-bold text-brand-blue">{value}</p>
+                    <p className="text-2xl font-bold text-brand-blue">{String(value)}</p>
                   </div>
                 ))}
               </div>
@@ -126,7 +154,7 @@ const SpreadsheetDetails = () => {
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
-              {analysis.analysis_results.insights.map((insight: string, index: number) => (
+              {analysis.analysis_results.insights.map((insight, index) => (
                 <li key={index} className="flex items-start">
                   <span className="inline-block w-2 h-2 mt-2 mr-2 bg-brand-blue rounded-full" />
                   {insight}
