@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,7 +13,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useNavigate } from "react-router-dom";
-import { Upload } from "lucide-react";
+import { Upload, RefreshCw } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 const SpreadsheetAnalysis = () => {
   const { user } = useAuth();
@@ -21,6 +22,13 @@ const SpreadsheetAnalysis = () => {
   const navigate = useNavigate();
   const [uploading, setUploading] = useState(false);
   const [analyses, setAnalyses] = useState<any[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      fetchAnalyses();
+    }
+  }, [user]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -51,17 +59,22 @@ const SpreadsheetAnalysis = () => {
       }
 
       // Create analysis record
-      const { error: dbError } = await supabase
+      const { data: newAnalysis, error: dbError } = await supabase
         .from('spreadsheet_analysis')
         .insert({
           file_name: file.name,
           original_file_path: filePath,
           user_id: user?.id,
-        });
+        })
+        .select()
+        .single();
 
       if (dbError) {
         throw dbError;
       }
+
+      // Trigger the analysis function
+      await triggerAnalysis(newAnalysis.id);
 
       toast({
         title: "Sucesso",
@@ -82,8 +95,23 @@ const SpreadsheetAnalysis = () => {
     }
   };
 
+  const triggerAnalysis = async (spreadsheetId: string) => {
+    try {
+      const response = await supabase.functions.invoke('analyze-spreadsheet', {
+        body: { spreadsheetId },
+      });
+
+      if (response.error) {
+        console.error('Error triggering analysis:', response.error);
+      }
+    } catch (error) {
+      console.error('Error calling analysis function:', error);
+    }
+  };
+
   const fetchAnalyses = async () => {
     try {
+      setRefreshing(true);
       const { data, error } = await supabase
         .from('spreadsheet_analysis')
         .select('*')
@@ -100,6 +128,36 @@ const SpreadsheetAnalysis = () => {
         title: "Erro",
         description: "Erro ao carregar análises",
       });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const refreshAnalyses = () => {
+    fetchAnalyses();
+  };
+
+  const getStatusDisplay = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return (
+          <div className="flex items-center space-x-2">
+            <span className="text-yellow-600">Pendente</span>
+          </div>
+        );
+      case 'processing':
+        return (
+          <div className="flex flex-col space-y-2">
+            <span className="text-blue-600">Processando</span>
+            <Progress value={60} className="h-2 w-24" />
+          </div>
+        );
+      case 'completed':
+        return <span className="text-green-600">Concluída</span>;
+      case 'failed':
+        return <span className="text-red-600">Falha</span>;
+      default:
+        return <span>{status}</span>;
     }
   };
 
@@ -110,7 +168,17 @@ const SpreadsheetAnalysis = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Análise de Planilhas</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Análise de Planilhas</h1>
+        <Button 
+          variant="outline" 
+          size="icon" 
+          onClick={refreshAnalyses}
+          disabled={refreshing}
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+        </Button>
+      </div>
       
       <div className="mb-8">
         <Button disabled={uploading} className="relative">
@@ -139,7 +207,7 @@ const SpreadsheetAnalysis = () => {
             {analyses.map((analysis) => (
               <TableRow key={analysis.id} className="cursor-pointer hover:bg-gray-50">
                 <TableCell>{analysis.file_name}</TableCell>
-                <TableCell>{analysis.status}</TableCell>
+                <TableCell>{getStatusDisplay(analysis.status)}</TableCell>
                 <TableCell>
                   {new Date(analysis.created_at).toLocaleDateString('pt-BR')}
                 </TableCell>
