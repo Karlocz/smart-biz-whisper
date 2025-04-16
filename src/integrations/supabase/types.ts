@@ -33,6 +33,39 @@ export type Database = {
         }
         Relationships: []
       }
+      spreadsheet_analysis: {
+        Row: {
+          analysis_results: Json | null
+          created_at: string
+          file_name: string
+          id: string
+          original_file_path: string
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          analysis_results?: Json | null
+          created_at?: string
+          file_name: string
+          id?: string
+          original_file_path: string
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          analysis_results?: Json | null
+          created_at?: string
+          file_name?: string
+          id?: string
+          original_file_path?: string
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, FileSpreadsheet } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { signOut } from "@/lib/auth";
 import { useNavigate } from "react-router-dom";
@@ -44,6 +44,16 @@ const Navbar = () => {
               <a href="#personas" className="text-gray-600 hover:text-brand-blue px-3 py-2 rounded-md text-sm font-medium">Para Quem</a>
               <a href="#pricing" className="text-gray-600 hover:text-brand-blue px-3 py-2 rounded-md text-sm font-medium">Preços</a>
               <a href="#roadmap" className="text-gray-600 hover:text-brand-blue px-3 py-2 rounded-md text-sm font-medium">Roadmap</a>
+              {user && (
+                <Button 
+                  variant="ghost" 
+                  onClick={() => navigate('/analise-planilhas')}
+                  className="flex items-center gap-2"
+                >
+                  <FileSpreadsheet size={18} />
+                  Análise de Planilhas
+                </Button>
+              )}
               {user ? (
                 <Button onClick={handleSignOut} variant="outline">Sair</Button>
               ) : (
@@ -73,6 +83,16 @@ const Navbar = () => {
             <a href="#personas" className="text-gray-600 hover:text-brand-blue block px-3 py-2 rounded-md text-base font-medium">Para Quem</a>
             <a href="#pricing" className="text-gray-600 hover:text-brand-blue block px-3 py-2 rounded-md text-base font-medium">Preços</a>
             <a href="#roadmap" className="text-gray-600 hover:text-brand-blue block px-3 py-2 rounded-md text-base font-medium">Roadmap</a>
+            {user && (
+              <Button 
+                variant="ghost" 
+                onClick={() => navigate('/analise-planilhas')}
+                className="w-full text-left flex items-center gap-2"
+              >
+                <FileSpreadsheet size={18} />
+                Análise de Planilhas
+              </Button>
+            )}
             {user ? (
               <Button onClick={handleSignOut} variant="outline" className="w-full">Sair</Button>
             ) : (
