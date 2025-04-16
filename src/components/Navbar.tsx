@@ -18,7 +18,7 @@ const Navbar = () => {
     if (error) {
       toast({
         variant: "destructive",
-        title: "Error",
+        title: "Erro",
         description: error.message,
       });
     } else {
@@ -40,15 +40,15 @@ const Navbar = () => {
           
           <div className="hidden md:block">
             <div className="ml-10 flex items-center space-x-4">
-              <a href="#features" className="text-gray-600 hover:text-brand-blue px-3 py-2 rounded-md text-sm font-medium">Features</a>
-              <a href="#personas" className="text-gray-600 hover:text-brand-blue px-3 py-2 rounded-md text-sm font-medium">Who It's For</a>
-              <a href="#pricing" className="text-gray-600 hover:text-brand-blue px-3 py-2 rounded-md text-sm font-medium">Pricing</a>
+              <a href="#features" className="text-gray-600 hover:text-brand-blue px-3 py-2 rounded-md text-sm font-medium">Recursos</a>
+              <a href="#personas" className="text-gray-600 hover:text-brand-blue px-3 py-2 rounded-md text-sm font-medium">Para Quem</a>
+              <a href="#pricing" className="text-gray-600 hover:text-brand-blue px-3 py-2 rounded-md text-sm font-medium">Preços</a>
               <a href="#roadmap" className="text-gray-600 hover:text-brand-blue px-3 py-2 rounded-md text-sm font-medium">Roadmap</a>
               {user ? (
-                <Button onClick={handleSignOut} variant="outline">Sign Out</Button>
+                <Button onClick={handleSignOut} variant="outline">Sair</Button>
               ) : (
                 <Button onClick={() => navigate('/auth')} className="ml-4 bg-brand-orange hover:bg-opacity-90 text-white">
-                  Sign In
+                  Entrar
                 </Button>
               )}
             </div>
@@ -69,15 +69,15 @@ const Navbar = () => {
       {isMenuOpen && (
         <div className="md:hidden">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white shadow-lg">
-            <a href="#features" className="text-gray-600 hover:text-brand-blue block px-3 py-2 rounded-md text-base font-medium">Features</a>
-            <a href="#personas" className="text-gray-600 hover:text-brand-blue block px-3 py-2 rounded-md text-base font-medium">Who It's For</a>
-            <a href="#pricing" className="text-gray-600 hover:text-brand-blue block px-3 py-2 rounded-md text-base font-medium">Pricing</a>
+            <a href="#features" className="text-gray-600 hover:text-brand-blue block px-3 py-2 rounded-md text-base font-medium">Recursos</a>
+            <a href="#personas" className="text-gray-600 hover:text-brand-blue block px-3 py-2 rounded-md text-base font-medium">Para Quem</a>
+            <a href="#pricing" className="text-gray-600 hover:text-brand-blue block px-3 py-2 rounded-md text-base font-medium">Preços</a>
             <a href="#roadmap" className="text-gray-600 hover:text-brand-blue block px-3 py-2 rounded-md text-base font-medium">Roadmap</a>
             {user ? (
-              <Button onClick={handleSignOut} variant="outline" className="w-full">Sign Out</Button>
+              <Button onClick={handleSignOut} variant="outline" className="w-full">Sair</Button>
             ) : (
               <Button onClick={() => navigate('/auth')} className="w-full bg-brand-orange hover:bg-opacity-90 text-white">
-                Sign In
+                Entrar
               </Button>
             )}
           </div>
