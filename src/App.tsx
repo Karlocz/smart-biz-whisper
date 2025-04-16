@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import SpreadsheetAnalysis from "./pages/SpreadsheetAnalysis";
+import SpreadsheetDetails from "./pages/SpreadsheetDetails";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +22,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/analise-planilhas" element={<SpreadsheetAnalysis />} />
+          <Route path="/analise-planilhas/:id" element={<SpreadsheetDetails />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

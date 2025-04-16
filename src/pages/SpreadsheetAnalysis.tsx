@@ -132,21 +132,30 @@ const SpreadsheetAnalysis = () => {
               <TableHead>Arquivo</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Data de Upload</TableHead>
+              <TableHead>Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {analyses.map((analysis) => (
-              <TableRow key={analysis.id}>
+              <TableRow key={analysis.id} className="cursor-pointer hover:bg-gray-50">
                 <TableCell>{analysis.file_name}</TableCell>
                 <TableCell>{analysis.status}</TableCell>
                 <TableCell>
                   {new Date(analysis.created_at).toLocaleDateString('pt-BR')}
                 </TableCell>
+                <TableCell>
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => navigate(`/analise-planilhas/${analysis.id}`)}
+                  >
+                    Ver Análise
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
             {analyses.length === 0 && (
               <TableRow>
-                <TableCell colSpan={3} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={4} className="text-center py-8 text-gray-500">
                   Nenhuma análise encontrada. Envie sua primeira planilha!
                 </TableCell>
               </TableRow>
