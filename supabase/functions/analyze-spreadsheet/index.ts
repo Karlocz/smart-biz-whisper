@@ -19,6 +19,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let spreadsheetId = null;
+  let supabase = null;
+
   try {
     // Validate OpenAI API key first
     if (!openAIApiKey) {
@@ -35,7 +38,8 @@ serve(async (req) => {
       );
     }
 
-    const { spreadsheetId } = await req.json();
+    const requestBody = await req.json();
+    spreadsheetId = requestBody.spreadsheetId;
     console.log(`Starting analysis for spreadsheet ID: ${spreadsheetId}`);
 
     if (!spreadsheetId) {
@@ -43,7 +47,7 @@ serve(async (req) => {
     }
 
     // Initialize Supabase client
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
 
     // Get spreadsheet details
     const { data: spreadsheet, error: fetchError } = await supabase
@@ -56,15 +60,32 @@ serve(async (req) => {
       throw new Error(`Error fetching spreadsheet: ${fetchError?.message || 'Not found'}`);
     }
 
+    // Check if the spreadsheet is already being processed or completed
+    if (spreadsheet.status === 'completed') {
+      console.log(`Spreadsheet ${spreadsheetId} already processed. Skipping analysis.`);
+      return new Response(
+        JSON.stringify({ success: true, message: 'Analysis already completed' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`Updating status to processing for spreadsheet ID: ${spreadsheetId}`);
+    
     // Update status to processing
-    await supabase
+    const { error: updateError } = await supabase
       .from('spreadsheet_analysis')
       .update({ status: 'processing' })
       .eq('id', spreadsheetId);
+      
+    if (updateError) {
+      console.error(`Error updating status to processing: ${updateError.message}`);
+      throw new Error(`Failed to update status: ${updateError.message}`);
+    }
 
-    console.log(`Updated status to processing for spreadsheet ID: ${spreadsheetId}`);
+    console.log(`Successfully updated status to processing`);
 
     // Download the file from storage
+    console.log(`Downloading file from storage bucket: spreadsheets, path: ${spreadsheet.original_file_path}`);
     const { data: fileData, error: downloadError } = await supabase.storage
       .from('spreadsheets')
       .download(spreadsheet.original_file_path);
@@ -73,13 +94,14 @@ serve(async (req) => {
       throw new Error(`Error downloading file: ${downloadError?.message || 'Not found'}`);
     }
 
+    console.log(`Successfully downloaded file, reading content`);
     const fileContent = await fileData.text();
     const fileLines = fileContent.split('\n').slice(0, 20).join('\n'); // Sample first 20 lines for analysis
     
     console.log(`Successfully read spreadsheet data, starting AI analysis`);
 
     // Analyze with OpenAI
-    console.log(`Making OpenAI API request with API key length: ${openAIApiKey.length}`);
+    console.log(`Making OpenAI API request with API key`);
     
     const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -130,20 +152,33 @@ serve(async (req) => {
     if (!aiResponse.ok) {
       const errorData = await aiResponse.json();
       console.error('OpenAI API error:', JSON.stringify(errorData));
+      
+      // Update status to failed
+      await supabase
+        .from('spreadsheet_analysis')
+        .update({ status: 'failed' })
+        .eq('id', spreadsheetId);
+        
       throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
     }
 
     const aiData = await aiResponse.json();
     console.log('OpenAI API response status:', aiResponse.status);
-    console.log('OpenAI API response data length:', JSON.stringify(aiData).length);
+    console.log('OpenAI API response data received. Processing results...');
     
     const analysisText = aiData.choices?.[0]?.message?.content;
     
     if (!analysisText) {
+      console.error('No analysis text received from OpenAI');
+      await supabase
+        .from('spreadsheet_analysis')
+        .update({ status: 'failed' })
+        .eq('id', spreadsheetId);
+        
       throw new Error('Failed to get analysis from AI');
     }
 
-    console.log(`Received AI analysis, parsing results`);
+    console.log(`Received AI analysis text, parsing as JSON`);
 
     // Parse the JSON result from the AI
     let analysisResults;
@@ -155,11 +190,20 @@ serve(async (req) => {
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError);
       console.log('AI response raw text:', analysisText);
+      
+      // Update status to failed
+      await supabase
+        .from('spreadsheet_analysis')
+        .update({ status: 'failed' })
+        .eq('id', spreadsheetId);
+        
       throw new Error('Failed to parse AI analysis results');
     }
 
+    console.log(`Updating spreadsheet with analysis results and status=completed`);
+    
     // Update the spreadsheet analysis with the results
-    const { error: updateError } = await supabase
+    const { error: updateResultsError } = await supabase
       .from('spreadsheet_analysis')
       .update({
         status: 'completed',
@@ -167,8 +211,9 @@ serve(async (req) => {
       })
       .eq('id', spreadsheetId);
 
-    if (updateError) {
-      throw new Error(`Error updating analysis results: ${updateError.message}`);
+    if (updateResultsError) {
+      console.error(`Error updating analysis results: ${updateResultsError.message}`);
+      throw new Error(`Error updating analysis results: ${updateResultsError.message}`);
     }
 
     console.log(`Analysis completed successfully for spreadsheet ID: ${spreadsheetId}`);
@@ -180,18 +225,17 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in spreadsheet analysis:', error);
     
-    // If we have a spreadsheet ID, update its status to failed
+    // If we have a spreadsheet ID and supabase client, update its status to failed
     try {
-      const { spreadsheetId } = await req.json();
-      if (spreadsheetId) {
-        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      if (spreadsheetId && supabase) {
+        console.log(`Updating status to failed for spreadsheet ID: ${spreadsheetId}`);
         await supabase
           .from('spreadsheet_analysis')
           .update({ status: 'failed' })
           .eq('id', spreadsheetId);
       }
     } catch (updateError) {
-      console.error('Error updating spreadsheet status:', updateError);
+      console.error('Error updating spreadsheet status to failed:', updateError);
     }
     
     return new Response(
