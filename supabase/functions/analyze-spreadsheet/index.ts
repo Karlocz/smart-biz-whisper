@@ -20,15 +20,26 @@ serve(async (req) => {
   }
 
   try {
+    // Validate OpenAI API key first
+    if (!openAIApiKey) {
+      console.error('OpenAI API key not configured');
+      return new Response(
+        JSON.stringify({ 
+          error: 'OpenAI API key not configured',
+          message: 'Please add the OPENAI_API_KEY to your Supabase Edge Function secrets'
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
     const { spreadsheetId } = await req.json();
     console.log(`Starting analysis for spreadsheet ID: ${spreadsheetId}`);
 
     if (!spreadsheetId) {
       throw new Error('Missing spreadsheet ID');
-    }
-
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
     }
 
     // Initialize Supabase client
@@ -51,6 +62,8 @@ serve(async (req) => {
       .update({ status: 'processing' })
       .eq('id', spreadsheetId);
 
+    console.log(`Updated status to processing for spreadsheet ID: ${spreadsheetId}`);
+
     // Download the file from storage
     const { data: fileData, error: downloadError } = await supabase.storage
       .from('spreadsheets')
@@ -66,6 +79,8 @@ serve(async (req) => {
     console.log(`Successfully read spreadsheet data, starting AI analysis`);
 
     // Analyze with OpenAI
+    console.log(`Making OpenAI API request with API key length: ${openAIApiKey.length}`);
+    
     const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -111,7 +126,17 @@ serve(async (req) => {
       }),
     });
 
+    // Check for API response errors
+    if (!aiResponse.ok) {
+      const errorData = await aiResponse.json();
+      console.error('OpenAI API error:', JSON.stringify(errorData));
+      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+    }
+
     const aiData = await aiResponse.json();
+    console.log('OpenAI API response status:', aiResponse.status);
+    console.log('OpenAI API response data length:', JSON.stringify(aiData).length);
+    
     const analysisText = aiData.choices?.[0]?.message?.content;
     
     if (!analysisText) {
@@ -126,6 +151,7 @@ serve(async (req) => {
       // Clean up any markdown code block formatting if present
       const jsonText = analysisText.replace(/```json\n?|\n?```/g, '');
       analysisResults = JSON.parse(jsonText);
+      console.log('Successfully parsed analysis results');
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError);
       console.log('AI response raw text:', analysisText);
